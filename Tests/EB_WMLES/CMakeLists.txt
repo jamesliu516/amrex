@@ -36,6 +36,25 @@ foreach(D IN LISTS AMReX_SPACEDIM)
 
     unset(_cylinder_sources)
 
+    ##########################################################################
+    #
+    # STL_Box test — 3D flow over an STL-imported box (3D only)
+    #
+    ##########################################################################
+    if (D EQUAL 3)
+        set(_stlbox_sources Exec/STL_Box/wmles_prob.H  Exec/STL_Box/wmles_prob.cpp
+                            Exec/STL_Box/wmles_prob_parm.H  Exec/STL_Box/wmles_prob_parm.cpp
+                            Exec/STL_Box/WMLES_bcfill.cpp ${_sources})
+        set(_stlbox_inputs Exec/STL_Box/inputs Exec/STL_Box/inputs-ci)
+
+        setup_test(${D} _stlbox_sources _stlbox_inputs
+           BASE_NAME WMLES_STL_Box
+           RUNTIME_SUBDIR STL_Box)
+
+        unset(_stlbox_sources)
+        unset(_stlbox_inputs)
+    endif()
+
     # Clean-up
     unset(_sources)
     unset(_input_files)
