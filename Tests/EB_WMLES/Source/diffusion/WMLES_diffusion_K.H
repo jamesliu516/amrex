@@ -3,6 +3,7 @@
 
 #include "WMLES_index_macros.H"
 #include "WMLES_parm.H"
+#include "WMLES_sgs_K.H"
 #include <AMReX_FArrayBox.H>
 #include <AMReX_CONSTANTS.H>
 #include <cmath>
@@ -12,6 +13,7 @@ void
 wmles_diffcoef (int i, int j, int k,
               amrex::Array4<amrex::Real const> const& q,
               amrex::Array4<amrex::Real> const& coefs,
+              amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxinv,
               Parm const& parm) noexcept
 {
     using amrex::Real;
@@ -26,17 +28,35 @@ wmles_diffcoef (int i, int j, int k,
     coefs(i,j,k,CETA) = parm.C_S * std::sqrt(q(i,j,k,QTEMP)) * q(i,j,k,QTEMP) / (q(i,j,k,QTEMP)+parm.T_S);
     coefs(i,j,k,CXI)  = Real(0.0);
     coefs(i,j,k,CLAM) = coefs(i,j,k,CETA)*parm.cp/parm.Pr;
+
+    // WMLES: add the Smagorinsky SGS contribution (mu_t, mu_t*cp/Pr_t)
+    if (parm.sgs_enable)
+    {
+        Real mu_t = q(i,j,k,QRHO) * wmles_compute_nu_t_cell(i,j,k,q,dxinv,parm);
+        coefs(i,j,k,CETA) += mu_t;
+        coefs(i,j,k,CLAM) += mu_t * parm.cp / parm.Pr_t;
+    }
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void
 wmles_constcoef (int i, int j, int k,
+              amrex::Array4<amrex::Real const> const& q,
               amrex::Array4<amrex::Real> const& coefs,
+              amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxinv,
               Parm const& parm) noexcept
 {
     coefs(i,j,k,CETA) = parm.const_visc_mu;
     coefs(i,j,k,CXI)  = parm.const_visc_ki;
     coefs(i,j,k,CLAM) = parm.const_lambda;
+
+    // WMLES: add the Smagorinsky SGS contribution (mu_t, mu_t*cp/Pr_t)
+    if (parm.sgs_enable)
+    {
+        Real mu_t = q(i,j,k,QRHO) * wmles_compute_nu_t_cell(i,j,k,q,dxinv,parm);
+        coefs(i,j,k,CETA) += mu_t;
+        coefs(i,j,k,CLAM) += mu_t * parm.cp / parm.Pr_t;
+    }
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE

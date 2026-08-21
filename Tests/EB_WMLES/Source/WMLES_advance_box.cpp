@@ -1,6 +1,6 @@
 
 #include <WMLES.H>
-#include <WMLES.Hydro_K.H>
+#include <WMLES_hydro_K.H>
 #include <WMLES_diffusion_K.H>
 
 #include <AMReX_EBFArrayBox.H>
@@ -27,7 +27,10 @@ WMLES::compute_dSdt_box (const Box& bx,
                  auto const& fzfab = flux[2]->array(););
 
     const Box& bxg2 = amrex::grow(bx,2);
-    qtmp.resize(bxg2, NPRIM);
+    // qtmp is grown by 3 so that the SGS kernel (which uses a +-1 stencil
+    // around every diffcoef cell on bxg2) stays in bounds.
+    const Box& bxg3 = amrex::grow(bx,3);
+    qtmp.resize(bxg3, NPRIM);
     auto const& q = qtmp.array();
 
     if (do_visc == 1)
@@ -35,7 +38,7 @@ WMLES::compute_dSdt_box (const Box& bx,
        diff_coeff.resize(bxg2, NCOEF);
     }
 
-    amrex::ParallelFor(bxg2,
+    amrex::ParallelFor(bxg3,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
         wmles_ctoprim(i, j, k, sfab, q, *lparm);
@@ -48,13 +51,13 @@ WMLES::compute_dSdt_box (const Box& bx,
           amrex::ParallelFor(bxg2,
           [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
           {
-              wmles_constcoef(i, j, k, coefs, *lparm);
+              wmles_constcoef(i, j, k, q, coefs, dxinv, *lparm);
           });
        } else {
           amrex::ParallelFor(bxg2,
           [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
           {
-              wmles_diffcoef(i, j, k, q, coefs, *lparm);
+              wmles_diffcoef(i, j, k, q, coefs, dxinv, *lparm);
           });
        }
     }

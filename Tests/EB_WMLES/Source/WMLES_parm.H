@@ -24,6 +24,7 @@ struct Parm
     amrex::Real const_lambda  = -1.0;
 
     // ---------- WMLES / SGS model parameters ----------
+    int  sgs_enable = 1;              // 1 = add Smagorinsky eddy viscosity to the diffusion coefficients
     amrex::Real Cs_smag = 0.18;       // Smagorinsky constant
     amrex::Real Pr_t    = 0.90;       // turbulent Prandtl number
     amrex::Real sgs_filter_width_ratio = 1.0; // filter width factor relative to grid
