@@ -3,6 +3,7 @@
 
 #include "WMLES_index_macros.H"
 #include "WMLES_parm.H"
+#include "WMLES_sgs_K.H"
 #include <AMReX_FArrayBox.H>
 #include <AMReX_CONSTANTS.H>
 #include <cmath>
@@ -35,7 +36,7 @@ wmles_diffcoef_eb (int i, int j, int k,
         Real mu_mol = parm.C_S * std::sqrt(q(i,j,k,QTEMP)) * q(i,j,k,QTEMP) / (q(i,j,k,QTEMP)+parm.T_S);
         // turbulent viscosity via SGS kernel (uses EB flags to skip covered neighbors)
         Real nu_t = wmles_compute_nu_t(i,j,k,q,flag,dxinv,parm);
-        Real mu_t = nu_t;
+        Real mu_t = q(i,j,k,QRHO) * nu_t;
 
         coefs(i,j,k,CETA) = mu_mol + mu_t;
         coefs(i,j,k,CXI)  = Real(0.0);

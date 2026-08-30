@@ -3,6 +3,7 @@
 
 #include "WMLES_index_macros.H"
 #include "WMLES_parm.H"
+#include "WMLES_sgs_K.H"
 #include <AMReX_FArrayBox.H>
 #include <AMReX_CONSTANTS.H>
 #include <cmath>
@@ -21,50 +22,15 @@ wmles_diffcoef (int i, int j, int k,
     {
 //        std::cout << "Computing diff coeffs at " << IntVect(i,j,k) <<
 //             " with  temp = " << q(i,j,k,UTEMP)  << '\n';
-        amrex::Abort("Negative temperature sent to wmles_diffcoef_eb");
+        amrex::Abort("Negative temperature sent to wmles_diffcoef");
     }
 
         // molecular viscosity (Sutherland-like placeholder)
         Real mu_mol = parm.C_S * std::sqrt(q(i,j,k,QTEMP)) * q(i,j,k,QTEMP) / (q(i,j,k,QTEMP)+parm.T_S);
-        // turbulent (eddy) viscosity from SGS model (kinematic nu_t)
-        // Compute local velocity gradients (2nd-order central differences)
-        AMREX_D_TERM(
-          Real dudx = (q(i+1,j,k,QU) - q(i-1,j,k,QU)) * Real(0.5) * dxinv[0];,
-          Real dudy = (q(i,j+1,k,QU) - q(i,j-1,k,QU)) * Real(0.5) * dxinv[1];,
-          Real dudz = (q(i,j,k+1,QU) - q(i,j,k-1,QU)) * Real(0.5) * dxinv[2];)
-        AMREX_D_TERM(
-          Real dvdx = (q(i+1,j,k,QV) - q(i-1,j,k,QV)) * Real(0.5) * dxinv[0];,
-          Real dvdy = (q(i,j+1,k,QV) - q(i,j-1,k,QV)) * Real(0.5) * dxinv[1];,
-          Real dvdz = (q(i,j,k+1,QV) - q(i,j,k-1,QV)) * Real(0.5) * dxinv[2];)
-        #if (AMREX_SPACEDIM == 3)
-          Real dwdx = (q(i+1,j,k,QW) - q(i-1,j,k,QW)) * Real(0.5) * dxinv[0];
-          Real dwdy = (q(i,j+1,k,QW) - q(i,j-1,k,QW)) * Real(0.5) * dxinv[1];
-          Real dwdz = (q(i,j,k+1,QW) - q(i,j,k-1,QW)) * Real(0.5) * dxinv[2];
-        #endif
-
-        // Strain rate magnitude squared: 2 * S_ij * S_ij
-        #if (AMREX_SPACEDIM == 2)
-          Real S2 = Real(2.0)*dudx*dudx + Real(2.0)*dvdy*dvdy
-                  + (dudy+dvdx)*(dudy+dvdx);
-        #else
-          Real S2 = Real(2.0)*(dudx*dudx + dvdy*dvdy + dwdz*dwdz)
-                  + (dudy+dvdx)*(dudy+dvdx)
-                  + (dudz+dwdx)*(dudz+dwdx)
-                  + (dvdz+dwdy)*(dvdz+dwdy);
-        #endif
-
-        Real strate = std::sqrt(S2);
-
-        // Filter width: Delta = (dx*dy*dz)^(1/3) * filter_width_ratio
-        Real Delta = parm.sgs_filter_width_ratio;
-        #if (AMREX_SPACEDIM == 2)
-          Delta *= std::sqrt(Real(1.0) / (dxinv[0]*dxinv[1]));
-        #else
-          Delta *= std::cbrt(Real(1.0) / (dxinv[0]*dxinv[1]*dxinv[2]));
-        #endif
-
-        Real nu_t = (parm.Cs_smag * Delta) * (parm.Cs_smag * Delta) * strate;
-        Real mu_t = nu_t; // treat as dynamic viscosity contribution
+        // turbulent (eddy) viscosity: kinematic nu_t from Smagorinsky SGS,
+        // converted to dynamic viscosity via density
+        Real nu_t = wmles_compute_nu_t(i, j, k, q, dxinv, parm);
+        Real mu_t = q(i,j,k,QRHO) * nu_t;
 
         coefs(i,j,k,CETA) = mu_mol + mu_t;
         coefs(i,j,k,CXI)  = Real(0.0);
