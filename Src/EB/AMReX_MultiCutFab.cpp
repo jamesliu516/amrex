@@ -18,7 +18,7 @@ namespace detail {
             : m_cellflags(a_cellflags)
             {}
 
-        [[nodiscard]]
+        AMREX_NODISCARD
         CutFab* create (const Box& box, int ncomps, const FabInfo& info, int box_index) const override
         {
             if ((*m_cellflags)[box_index].getType() == FabType::singlevalued) {
@@ -28,10 +28,10 @@ namespace detail {
             }
         }
 
-        [[nodiscard]]
+        AMREX_NODISCARD
         CutFabFactory* clone () const override { return new CutFabFactory(m_cellflags); }
 
-        [[nodiscard]]
+        AMREX_NODISCARD
         Long nBytes (const Box& box, int ncomps, int box_index) const override
         {
             if ((*m_cellflags)[box_index].getType() == FabType::singlevalued) {

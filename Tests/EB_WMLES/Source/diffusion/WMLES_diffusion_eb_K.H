@@ -3,7 +3,6 @@
 
 #include "WMLES_index_macros.H"
 #include "WMLES_parm.H"
-#include "WMLES_sgs_K.H"
 #include <AMReX_FArrayBox.H>
 #include <AMReX_CONSTANTS.H>
 #include <cmath>
@@ -13,8 +12,8 @@ void
 wmles_diffcoef_eb (int i, int j, int k,
                  amrex::Array4<amrex::Real const> const& q,
                  amrex::Array4<amrex::EBCellFlag const> const& flag,
-                 amrex::Array4<amrex::Real> const& coefs,
                  amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxinv,
+                 amrex::Array4<amrex::Real> const& coefs,
                  Parm const& parm) noexcept
 {
     using amrex::Real;
@@ -27,29 +26,30 @@ wmles_diffcoef_eb (int i, int j, int k,
     }
 
     bool cov = flag(i,j,k).isCovered();
-    coefs(i,j,k,CETA) = cov ? -1.e10 : parm.C_S * std::sqrt(q(i,j,k,QTEMP)) * q(i,j,k,QTEMP) / (q(i,j,k,QTEMP)+parm.T_S);
-    coefs(i,j,k,CXI)  = cov ? -1.e10 : Real(0.0);
-    coefs(i,j,k,CLAM) = cov ? -1.e10 : coefs(i,j,k,CETA)*parm.cp/parm.Pr;
+    if (cov) {
+        coefs(i,j,k,CETA) = -1.e10;
+        coefs(i,j,k,CXI)  = -1.e10;
+        coefs(i,j,k,CLAM) = -1.e10;
+    } else {
+        // molecular viscosity
+        Real mu_mol = parm.C_S * std::sqrt(q(i,j,k,QTEMP)) * q(i,j,k,QTEMP) / (q(i,j,k,QTEMP)+parm.T_S);
+        // turbulent viscosity via SGS kernel (uses EB flags to skip covered neighbors)
+        Real nu_t = wmles_compute_nu_t(i,j,k,q,flag,dxinv,parm);
+        Real mu_t = nu_t;
 
-    // WMLES: add the Smagorinsky SGS contribution, but only on fully regular
-    // cells.  Cut cells are handled by the wall model (Phase 4), and the
-    // central-difference stencil used by wmles_compute_nu_t would read state
-    // in covered neighbors otherwise.
-    if (parm.sgs_enable && flag(i,j,k).isRegular())
-    {
-        Real mu_t = q(i,j,k,QRHO) * wmles_compute_nu_t(i,j,k,q,flag,dxinv,parm);
-        coefs(i,j,k,CETA) += mu_t;
-        coefs(i,j,k,CLAM) += mu_t * parm.cp / parm.Pr_t;
+        coefs(i,j,k,CETA) = mu_mol + mu_t;
+        coefs(i,j,k,CXI)  = Real(0.0);
+        Real lam_mol = mu_mol * parm.cp / parm.Pr;
+        Real lam_turb = mu_t * parm.cp / parm.Pr_t;
+        coefs(i,j,k,CLAM) = lam_mol + lam_turb;
     }
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void
 wmles_constcoef_eb (int i, int j, int k,
-                 amrex::Array4<amrex::Real const> const& q,
                  amrex::Array4<amrex::EBCellFlag const> const& flag,
                  amrex::Array4<amrex::Real> const& coefs,
-                 amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxinv,
                  Parm const& parm) noexcept
 {
     using amrex::Real;
@@ -58,15 +58,6 @@ wmles_constcoef_eb (int i, int j, int k,
      coefs(i,j,k,CETA) = cov ? -1.e01 : parm.const_visc_mu;
      coefs(i,j,k,CXI)  = cov ? -1.e01 : parm.const_visc_ki;
      coefs(i,j,k,CLAM) = cov ? -1.e01 : parm.const_lambda;
-
-     // WMLES: add the Smagorinsky SGS contribution on fully regular cells
-     // (see comment in wmles_diffcoef_eb).
-     if (parm.sgs_enable && flag(i,j,k).isRegular())
-     {
-         Real mu_t = q(i,j,k,QRHO) * wmles_compute_nu_t(i,j,k,q,flag,dxinv,parm);
-         coefs(i,j,k,CETA) += mu_t;
-         coefs(i,j,k,CLAM) += mu_t * parm.cp / parm.Pr_t;
-     }
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE

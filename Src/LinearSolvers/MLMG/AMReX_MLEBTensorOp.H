@@ -24,9 +24,8 @@ namespace amrex {
 // The user needs to provide `a` by `setACoeffs`, eta by `setShearViscosity`,
 // and kappa by `setBulkViscosity`.  If `setBulkViscosity` is not called,
 // kappa is set to zero.  The user must also call `setEBShearViscosity` to set
-// viscosity on EB, and `setEBBulkViscosity` to set bulk viscosity on EB.
-// `setBulkViscosity` and `setEBBulkViscosity` must either both be called or
-// both be omitted.  Passing a value of zero still counts as calling them.
+// viscosity on EB.  Optionally, `setEBBulkViscosity` can be used to set
+// bulk viscosity on EB.
 //
 // The scalars alpha and beta can be set with `setScalar(Real, Real)`.  If
 // they are not set, their default value is 1.
@@ -137,9 +136,6 @@ public:
     /**
      * \brief Set EB bulk viscosity to a constant value.
      *
-     * Passing zero still counts as providing the EB bulk viscosity, so
-     * `setBulkViscosity` must be called as well.
-     *
      * \param amrlev AMR level receiving the value.
      * \param kappa  Scalar EB bulk viscosity.
      */
@@ -150,21 +146,11 @@ public:
     [[nodiscard]] bool isCrossStencil () const final { return false; }
     [[nodiscard]] bool isTensorOp () const final { return true; }
 
-    /**
-     * \brief True if coefficients have changed since the last prepareForSolve().
-     *
-     * The operator may be reused for any number of solves as long as its
-     * coefficients are left untouched.
-     */
+    //! True if coefficients/viscosities must be refreshed before apply().
     [[nodiscard]] bool needsUpdate () const final {
         return (m_needs_update || MLEBABecLap::needsUpdate());
     }
-    /**
-     * \brief Not implemented for tensor operators.
-     *
-     * Changing viscosity or `a` coefficients after prepareForSolve() is not
-     * supported; build a new operator instead.
-     */
+    //! Refresh coefficient averages (not yet implemented).
     void update () final {
         amrex::Abort("MLEBTensorOp: update TODO");
     }

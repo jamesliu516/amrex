@@ -2,14 +2,12 @@
 #define AMREX_GPU_TYPES_H_
 #include <AMReX_Config.H>
 
-#ifdef AMREX_USE_GPU
-
 #include <AMReX_Extension.H>
-#include <AMReX_GpuQualifiers.H>
+
+#ifdef AMREX_USE_GPU
 
 #ifdef AMREX_USE_SYCL
 #  include <sycl/sycl.hpp>
-#  include <cstddef>
 #endif
 
 namespace amrex {

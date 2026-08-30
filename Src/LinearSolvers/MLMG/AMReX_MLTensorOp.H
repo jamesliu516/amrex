@@ -128,21 +128,11 @@ public:
     [[nodiscard]] bool isCrossStencil () const final { return false; }
     [[nodiscard]] bool isTensorOp () const final { return true; }
 
-    /**
-     * \brief True if coefficients have changed since the last prepareForSolve().
-     *
-     * The operator may be reused for any number of solves as long as its
-     * coefficients are left untouched.
-     */
+    //! True if viscosity coefficients need to be rebuilt before apply().
     [[nodiscard]] bool needsUpdate () const final {
         return (m_needs_update || MLABecLaplacian::needsUpdate());
     }
-    /**
-     * \brief Not implemented for tensor operators.
-     *
-     * Changing viscosity or `a` coefficients after prepareForSolve() is not
-     * supported; build a new operator instead.
-     */
+    //! Rebuild coefficient averages (not yet implemented).
     void update () final {
         amrex::Abort("MLTensorOp: update TODO");
     }

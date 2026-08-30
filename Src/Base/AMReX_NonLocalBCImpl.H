@@ -410,7 +410,7 @@ MultiBlockCommMetaData::define (const BoxArray& dstba, const DistributionMapping
 
 template <BaseFabType FAB, class DTOS, class Proj>
 #ifdef AMREX_USE_MPI
-[[nodiscard]]
+AMREX_NODISCARD
 #endif
 CommHandler
 Comm_nowait (FabArray<FAB>& mf, int scomp, int ncomp, FabArrayBase::CommMetaData const& cmd,

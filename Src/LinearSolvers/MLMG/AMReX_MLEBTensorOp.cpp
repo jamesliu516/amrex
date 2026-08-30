@@ -90,7 +90,6 @@ MLEBTensorOp::setBulkViscosity (int amrlev, const Array<MultiFab const*,AMREX_SP
         MultiFab::Copy(m_kappa[amrlev][0][idim], *kappa[idim], 0, 0, 1, 0);
     }
     m_has_kappa = true;
-    m_needs_update = true;
 }
 
 void
@@ -100,28 +99,24 @@ MLEBTensorOp::setBulkViscosity (int amrlev, Real kappa)
         m_kappa[amrlev][0][idim].setVal(kappa);
     }
     m_has_kappa = true;
-    m_needs_update = true;
 }
 
 void
 MLEBTensorOp::setEBShearViscosity (int amrlev, MultiFab const& eta)
 {
     MLEBABecLap::setEBHomogDirichlet(amrlev, eta);
-    m_needs_update = true;
 }
 
 void
 MLEBTensorOp::setEBShearViscosity (int amrlev, Real eta)
 {
     MLEBABecLap::setEBHomogDirichlet(amrlev, eta);
-    m_needs_update = true;
 }
 
 void
 MLEBTensorOp::setEBShearViscosityWithInflow (int amrlev, MultiFab const& eta, MultiFab const& eb_vel)
 {
     MLEBABecLap::setEBDirichlet(amrlev, eb_vel, eta);
-    m_needs_update = true;
 }
 
 void
@@ -129,15 +124,15 @@ MLEBTensorOp::setEBBulkViscosity (int amrlev, MultiFab const& kappa)
 {
     MultiFab::Copy(m_eb_kappa[amrlev][0], kappa, 0, 0, 1, 0);
     m_has_eb_kappa = true;
-    m_needs_update = true;
 }
 
 void
 MLEBTensorOp::setEBBulkViscosity (int amrlev, Real kappa)
 {
-    m_eb_kappa[amrlev][0].setVal(kappa);
-    m_has_eb_kappa = true;
-    m_needs_update = true;
+    if (kappa != 0.0) {
+        m_eb_kappa[amrlev][0].setVal(kappa);
+        m_has_eb_kappa = true;
+    }
 }
 
 void
@@ -199,8 +194,6 @@ MLEBTensorOp::prepareForSolve ()
     }
 
     MLEBABecLap::prepareForSolve();
-
-    m_needs_update = false;
 }
 
 void

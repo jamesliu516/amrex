@@ -52,14 +52,3 @@ prob.inflow_velocity = 1.0
 prob.inflow_rho      = 1.0
 prob.inflow_T        = 300.0
 prob.inflow_p        = 71500.0
-
-# ── WMLES model ──
-# wmles.mu sets a constant dynamic viscosity (alias of wmles.const_visc_mu).
-# Bulk viscosity and thermal conductivity default to 0 and mu*cp/Pr.
-wmles.mu = 1.0e-4
-wmles.Pr  = 0.72
-
-# Smagorinsky SGS eddy viscosity (on by default; set wmles.sgs_enable = 0 to disable)
-wmles.sgs_enable = 1
-wmles.Cs_smag    = 0.18
-wmles.Pr_t       = 0.9

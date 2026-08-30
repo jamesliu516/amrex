@@ -1,7 +1,7 @@
 
 #include <WMLES.H>
-#include <WMLES_hydro_K.H>
-#include <WMLES_hydro_eb_K.H>
+#include <WMLES.Hydro_K.H>
+#include <WMLES.Hydro_eb_K.H>
 #include <WMLES_divop_K.H>
 #include <WMLES_diffusion_eb_K.H>
 
@@ -117,13 +117,13 @@ WMLES::compute_dSdt_box_eb (const Box& bx,
           amrex::ParallelFor(bxg4,
           [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
           {
-              wmles_constcoef_eb(i, j, k, q, flag, coefs, dxinv, *lparm);
+              wmles_constcoef_eb(i, j, k, flag, coefs, *lparm);
           });
        } else {
           amrex::ParallelFor(bxg4,
           [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
           {
-              wmles_diffcoef_eb(i, j, k, q, flag, coefs, dxinv, *lparm);
+              wmles_diffcoef_eb(i, j, k, q, flag, dxinv, coefs, *lparm);
           });
        }
     }

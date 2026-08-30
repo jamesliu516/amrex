@@ -62,19 +62,14 @@ public:
         }
     }
 
-    void RedistributeLocal (bool remove_neg=true,
-                            IntVect max_cells_moved=IntVect(1))
+    void RedistributeLocal (bool remove_neg=true)
     {
         const int lev_min = 0;
         const int lev_max = finestLevel();
         const IntVect nGrow(0);
         const bool local = true;
+        const IntVect max_cells_moved(1);
         Redistribute(lev_min, lev_max, nGrow, local, max_cells_moved, remove_neg);
-    }
-
-    bool RedistributeMaskLooksCheapForTest (IntVect max_cells_moved) const
-    {
-        return RedistributeMaskLooksCheap(0, max_cells_moved);
     }
 
     void RedistributeGlobal (bool remove_neg=true)
@@ -358,8 +353,6 @@ struct TestParams
     int sort;
     int test_level_lost = 0;
     int stable_redistribute = 0;
-    IntVect max_cells_moved = IntVect(1);
-    int expected_mask_lookup = -1;
 };
 
 void testRedistribute();
@@ -477,8 +470,6 @@ void get_test_params(TestParams& params, const std::string& prefix)
     pp.query("num_runtime_int", num_runtime_int);
     pp.query("remove_negative", remove_negative);
     pp.query("stable_redistribute", params.stable_redistribute);
-    pp.query("max_cells_moved", params.max_cells_moved);
-    pp.query("expected_mask_lookup", params.expected_mask_lookup);
 
     params.sort = 0;
     pp.query("sort", params.sort);
@@ -533,11 +524,6 @@ void testRedistribute ()
     TestParticleContainer pc(geom, dm, ba, rr);
     pc.setStableRedistribute(params.stable_redistribute);
 
-    if (params.expected_mask_lookup >= 0) {
-        const bool mask_lookup = pc.RedistributeMaskLooksCheapForTest(params.max_cells_moved);
-        AMREX_ALWAYS_ASSERT(mask_lookup == static_cast<bool>(params.expected_mask_lookup));
-    }
-
     IntVect nppc(params.num_ppc);
 
     amrex::Print() << "About to initialize particles \n";
@@ -556,11 +542,11 @@ void testRedistribute ()
         if (!remove_negative) {
             auto old = pc.TotalNumberOfParticles();
             pc.negateEven();
-            pc.RedistributeLocal(false, params.max_cells_moved);
+            pc.RedistributeLocal(false);
             AMREX_ALWAYS_ASSERT(old == pc.TotalNumberOfParticles(false));
             pc.negateEven();
         }
-        pc.RedistributeLocal(true, params.max_cells_moved);
+        pc.RedistributeLocal();
         if (params.sort) { pc.SortParticlesByCell(); }
         pc.checkAnswer();
     }

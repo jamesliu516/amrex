@@ -58,7 +58,7 @@ int TinyProfiler::verbose = 0;
 double TinyProfiler::print_threshold = 1.;
 bool TinyProfiler::enabled = true;
 bool TinyProfiler::memprof_enabled = true;
-std::string TinyProfiler::output_file{"stdout"};
+std::string TinyProfiler::output_file;
 
 namespace {
     constexpr char mainregion[] = "main";
@@ -68,35 +68,6 @@ namespace {
     // cycle. Re-armed in Initialize() so processes that cycle AMReX init/finalize
     // multiple times (e.g. Jupyter notebooks) pick up an updated value each cycle.
     bool output_file_read = false;
-
-    // Output-file values that select a stream (or no output) instead of naming
-    // an actual file
-    bool is_stream_name (std::string const& filename)
-    {
-        return filename.empty() || filename == "stdout" || filename == "stderr"
-            || filename == "/dev/null";
-    }
-
-    // Select the output stream for a profiling report: "" and "stdout" mean the
-    // default out stream of AMReX, "stderr" the default error stream, and
-    // "/dev/null" no output (nullptr). Otherwise, the named file is opened in
-    // append mode.
-    std::ostream* open_output_stream (std::string const& filename, std::ofstream& ofs)
-    {
-        std::ostream* os = nullptr;
-        if (filename.empty() || filename == "stdout") {
-            os = &(amrex::OutStream());
-        } else if (filename == "stderr") {
-            os = &(amrex::ErrorStream());
-        } else if (filename != "/dev/null") {
-            ofs.open(filename, std::ios_base::app);
-            if (!ofs.is_open()) {
-                amrex::Error("TinyProfiler failed to open "+filename);
-            }
-            os = static_cast<std::ostream*>(&ofs);
-        }
-        return os;
-    }
 }
 
 TinyProfiler::TinyProfiler (std::string funcname) noexcept
@@ -363,9 +334,9 @@ TinyProfiler::Initialize ()
 
     // Re-arm the output-file read for this cycle and reset the cached value, so
     // a new tiny_profiler.output_file is picked up across init/finalize cycles
-    // and a cycle that sets nothing falls back to the default (stdout).
+    // and a cycle that sets nothing falls back to the default out stream.
     output_file_read = false;
-    output_file = "stdout";
+    output_file.clear();
 
     if (!enabled) { return; }
 
@@ -428,11 +399,19 @@ TinyProfiler::Finalize (bool bFlushing)
     std::ofstream ofs;
     std::ostream* os = nullptr;
     if (ParallelDescriptor::IOProcessor()) {
-        os = open_output_stream(get_output_file(), ofs);
+        auto const& ofile = get_output_file();
+        if (ofile.empty()) {
+            os = &(amrex::OutStream());
+        } else if (ofile != "/dev/null") {
+            ofs.open(ofile, std::ios_base::app);
+            if (!ofs.is_open()) {
+                amrex::Error("TinyProfiler failed to open "+ofile);
+            }
+            os = static_cast<std::ostream*>(&ofs);
+        }
     }
 
     IOFormatSaver iofmtsaver(amrex::OutStream());
-    IOFormatSaver iofmtsaver_estream(amrex::ErrorStream());
 
     if (os)
     {
@@ -500,7 +479,16 @@ TinyProfiler::MemoryFinalize (bool bFlushing)
     std::ofstream ofs;
     std::ostream* os = nullptr;
     if (ParallelDescriptor::IOProcessor()) {
-        os = open_output_stream(get_output_file(), ofs);
+        auto const& ofile = get_output_file();
+        if (ofile.empty()) {
+            os = &(amrex::OutStream());
+        } else if (ofile != "/dev/null") {
+            ofs.open(ofile, std::ios_base::app);
+            if (!ofs.is_open()) {
+                amrex::Error("TinyProfiler failed to open "+ofile);
+            }
+            os = static_cast<std::ostream*>(&ofs);
+        }
     }
 
     PrintMemoryUsage(os, false);
@@ -1062,8 +1050,10 @@ TinyProfiler::get_output_file ()
         pp.query("output_file", output_file);
 
         if (ParallelDescriptor::IOProcessor()) {
-            if (!is_stream_name(output_file) && FileSystem::Exists(output_file)) {
-                FileSystem::Remove(output_file);
+            if (!output_file.empty() && output_file != "/dev/null") {
+                if (FileSystem::Exists(output_file)) {
+                    FileSystem::Remove(output_file);
+                }
             }
         }
     }

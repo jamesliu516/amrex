@@ -8,6 +8,7 @@
 
 #include "wmles_prob.H"
 #include "WMLES_parm.H"
+#include "WMLES_K.H"
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::Real

@@ -393,20 +393,11 @@ WMLES::read_params ()
     if (do_visc)
     {
         pp.query("use_const_visc",use_const_visc);
-        // wmles.mu is an alias for a constant dynamic viscosity: specifying it
-        // implies use_const_visc = 1.  const_visc_ki (bulk viscosity) and
-        // const_lambda (thermal conductivity) are optional; sensible defaults
-        // are filled in below after Parm::Initialize().
-        if (pp.query("mu", h_parm->const_visc_mu)) {
-            use_const_visc = true;
-        }
         if (use_const_visc)
         {
-            if (h_parm->const_visc_mu < 0.0) {
-                pp.get("const_visc_mu", h_parm->const_visc_mu);
-            }
-            pp.query("const_visc_ki", h_parm->const_visc_ki);
-            pp.query("const_lambda" , h_parm->const_lambda);
+            pp.get("const_visc_mu",h_parm->const_visc_mu);
+            pp.get("const_visc_ki",h_parm->const_visc_ki);
+            pp.get("const_lambda" ,h_parm->const_lambda);
         }
     } else {
        use_const_visc = true;
@@ -445,24 +436,7 @@ WMLES::read_params ()
     pp.query("C_S"      , h_parm->C_S);
     pp.query("T_S"      , h_parm->T_S);
 
-    // SGS model parameters
-    pp.query("sgs_enable", h_parm->sgs_enable);
-    pp.query("Cs_smag"  , h_parm->Cs_smag);
-    pp.query("Pr_t"     , h_parm->Pr_t);
-    pp.query("sgs_filter_width_ratio", h_parm->sgs_filter_width_ratio);
-
     h_parm->Initialize();
-    // Fill in default bulk viscosity / thermal conductivity for the constant
-    // viscosity model if they were not specified.
-    if (use_const_visc)
-    {
-        if (h_parm->const_visc_ki < 0.0) {
-            h_parm->const_visc_ki = 0.0;
-        }
-        if (h_parm->const_lambda < 0.0) {
-            h_parm->const_lambda = h_parm->const_visc_mu * h_parm->cp / h_parm->Pr;
-        }
-    }
     amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice, h_parm, h_parm+1, d_parm);
 
     // eb_weights_type:

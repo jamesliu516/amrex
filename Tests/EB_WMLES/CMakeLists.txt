@@ -3,12 +3,7 @@ if (NOT AMReX_AMRLEVEL)
 endif ()
 
 foreach(D IN LISTS AMReX_SPACEDIM)
-    # NOTE: Source/WMLES_bcfill.cpp is intentionally NOT listed here.  Each
-    # Exec/* case ships its own WMLES_bcfill.cpp (with the inflow BC), and
-    # compiling the generic Source/ version as well would create a duplicate
-    # definition of wmles_bcfill at link time.  (The Source/ copy is only used
-    # by the GNUmake path, mirroring Tests/EB_CNS.)
-    set(_sources main.cpp WMLES_advance.cpp WMLES_advance_box.cpp WMLES_advance_box_eb.cpp
+    set(_sources main.cpp WMLES_advance.cpp WMLES_advance_box.cpp WMLES_advance_box_eb.cpp WMLES_bcfill.cpp
        WMLESBld.cpp WMLES.cpp WMLES.H WMLES_derive.cpp WMLES_derive.H WMLES_index_macros.H WMLES_init_eb2.cpp WMLES_io.cpp
        WMLES_K.H WMLES_parm.cpp WMLES_parm.H WMLES_setup.cpp WMLES_tagging.H
        WMLES_sgs_K.H WMLES_wallmodel_K.H)

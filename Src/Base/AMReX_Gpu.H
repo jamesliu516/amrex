@@ -2,11 +2,6 @@
 #define AMREX_GPU_H_
 #include <AMReX_Config.H>
 
-/**
- * \file AMReX_Gpu.H
- * \brief Convenience header for the core AMReX GPU facilities.
- */
-
 #ifdef AMREX_USE_HIP
 #include <hip/hip_runtime.h>
 namespace amrex::Hip {}

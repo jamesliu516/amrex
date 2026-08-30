@@ -5,26 +5,24 @@
 #include <AMReX_Gpu.H>
 #include <AMReX_EBCellFlag.H>
 #include "WMLES_parm.H"
-#include <cmath>
 
 // ---------------------------------------------------------------------------
-// Smagorinsky eddy viscosity
-//   nu_t = (Cs * Delta)^2 * |S|
-//   Delta = filter_width_ratio * (dx*dy*dz)^(1/3)
-//   |S|   = sqrt(2 * S_ij * S_ij)
-//
-// wmles_compute_nu_t_cell: core kernel, no EB check (regular-cell path)
-// wmles_compute_nu_t      : EB-aware wrapper, returns 0 on covered cells
+// Compute Smagorinsky eddy viscosity nu_t = (Cs * Delta)^2 * |S|
+// Delta = filter_width_ratio * (dx*dy*dz)^(1/3)
+// |S|   = sqrt(2 * S_ij * S_ij)
 // ---------------------------------------------------------------------------
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::Real
-wmles_compute_nu_t_cell (int i, int j, int k,
-                         amrex::Array4<amrex::Real const> const& q,
-                         amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxinv,
-                         Parm const& parm) noexcept
+wmles_compute_nu_t (int i, int j, int k,
+                    amrex::Array4<amrex::Real const> const& q,
+                    amrex::Array4<amrex::EBCellFlag const> const& flag,
+                    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxinv,
+                    Parm const& parm) noexcept
 {
     using amrex::Real;
+
+    if (flag(i,j,k).isCovered()) { return Real(0.0); }
 
     // Velocity gradients at cell center (2nd-order central difference)
     AMREX_D_TERM(
@@ -67,21 +65,6 @@ wmles_compute_nu_t_cell (int i, int j, int k,
     Real nu_t = (parm.Cs_smag * Delta) * (parm.Cs_smag * Delta) * strate;
 
     return nu_t;
-}
-
-AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-amrex::Real
-wmles_compute_nu_t (int i, int j, int k,
-                    amrex::Array4<amrex::Real const> const& q,
-                    amrex::Array4<amrex::EBCellFlag const> const& flag,
-                    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxinv,
-                    Parm const& parm) noexcept
-{
-    using amrex::Real;
-
-    if (flag(i,j,k).isCovered()) { return Real(0.0); }
-
-    return wmles_compute_nu_t_cell(i,j,k,q,dxinv,parm);
 }
 
 #endif // WMLES_SGS_K_H_
